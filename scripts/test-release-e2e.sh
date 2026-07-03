@@ -150,6 +150,10 @@ grep -Eq "ok[[:space:]]+codex prompt -> $SOURCE_PROMPT" "$TMPDIR/status.txt" || 
 grep -Eq "ok[[:space:]]+opencode prompt -> $SOURCE_PROMPT" "$TMPDIR/status.txt" || { cat "$TMPDIR/status.txt" >&2; exit 1; }
 grep -q "history backfill: " "$TMPDIR/status.txt" || { cat "$TMPDIR/status.txt" >&2; exit 1; }
 
+HOME="$HOME_DIR" \
+PYTHONDONTWRITEBYTECODE=1 \
+INTROSPECT_HOME="$INTROSPECT_HOME_DIR" \
+AGENTS_HOME="$AGENTS_HOME_DIR" \
 "$CLI" dashboard > "$TMPDIR/dashboard.txt"
 grep -q "Signal" "$TMPDIR/dashboard.txt" || { cat "$TMPDIR/dashboard.txt" >&2; exit 1; }
 
@@ -204,8 +208,16 @@ INTROSPECT_NOTIFY=0 \
 
 grep -q '"dry_run": true' "$FEEDBACK_DIR/reflector-batches.jsonl"
 grep -q 'release e2e fake wake event' "$FEEDBACK_DIR/last-reflector-prompt.md"
+HOME="$HOME_DIR" \
+PYTHONDONTWRITEBYTECODE=1 \
+INTROSPECT_HOME="$INTROSPECT_HOME_DIR" \
+AGENTS_HOME="$AGENTS_HOME_DIR" \
 "$CLI" runs > "$TMPDIR/runs.txt"
 grep -q "recent runs" "$TMPDIR/runs.txt" || { cat "$TMPDIR/runs.txt" >&2; exit 1; }
+HOME="$HOME_DIR" \
+PYTHONDONTWRITEBYTECODE=1 \
+INTROSPECT_HOME="$INTROSPECT_HOME_DIR" \
+AGENTS_HOME="$AGENTS_HOME_DIR" \
 "$CLI" diff --summary > "$TMPDIR/diff.txt"
 grep -q "changed:" "$TMPDIR/diff.txt" || { cat "$TMPDIR/diff.txt" >&2; exit 1; }
 
