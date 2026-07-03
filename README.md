@@ -8,6 +8,53 @@ Introspect watches local Claude, Codex, and OpenCode sessions for moments where 
 
 Runtime state lives under `~/.introspect`: prompt links, settings, transcript-derived events, classifier scores, queued runs, reflector prompts, surface diffs, proposals, run history, local memory, and user-wide skills. Optional PostHog telemetry syncs event metadata and content hashes to the configured Introspect project; raw transcript archives are not uploaded.
 
+## What It Actually Does
+
+Introspect is not a chat command you remember to invoke after every mistake. After install, you keep using Codex, Claude, or OpenCode normally. Introspect watches the local transcripts and prompt hooks, scores direct user messages for agent failure signals, and wakes a background reflector only when the signal is strong enough.
+
+The reflector reads the source conversation and chooses one narrow outcome:
+
+- `no_change`: the event was noise, already handled, or not an instruction problem.
+- `core_prompt`: update the global prompt at `~/.introspect/AGENTS.md`.
+- `project_prompt`: update or propose a repo-level `AGENTS.md` change.
+- `home_memory`: save a durable user or machine fact that should not change loaded behavior.
+- `skill_new` or `skill_update`: create or update a user-wide repeatable workflow under `~/.introspect/skills`.
+- `project_skill_new` or `project_skill_update`: create or update a repo-specific skill under `.agents/skills` or `.claude/skills`.
+- `skill_prune`: deprecate or narrow an existing skill.
+
+Manual `introspect run` is a diagnostic/indexing command. With `--apply never`, it records transcript changes and writes run artifacts, but it does not rewrite prompts, memory, or skills. Background reflector runs, or manual runs with an apply mode that invokes the reflector, are the paths that can produce durable changes.
+
+## Is It Creating Skills?
+
+Skills are created only when the reflector classifies a repeated procedure or corrected workflow as `skill_new`, `skill_update`, `project_skill_new`, or `project_skill_update`. A normal trigger can still produce `no_change`, a prompt edit, memory, or a proposal instead. That is expected behavior.
+
+Check the current machine:
+
+```bash
+introspect status
+introspect runs -n 20
+introspect diff --summary
+ls ~/.introspect/skills
+ls ~/.introspect/proposals
+```
+
+Where results appear:
+
+- User-wide source skills: `~/.introspect/skills/<skill>/SKILL.md`
+- Codex/OpenCode user skill exports: `~/.agents/skills/<skill>`
+- Claude user skill exports: `~/.claude/skills/<skill>`
+- OpenCode-only user skill exports: `~/.config/opencode/skills/<skill>`
+- Codex/OpenCode project skills: `<repo>/.agents/skills/<skill>/SKILL.md`
+- Claude project skills: `<repo>/.claude/skills/<skill>/SKILL.md`
+- Project prompt or project skill proposals: `~/.introspect/proposals`
+
+Validate and resync user-wide skills:
+
+```bash
+INTROSPECT_SKILLS_DIR=~/.introspect/skills /usr/bin/python3 scripts/validate-skills.py
+INTROSPECT_HOME=~/.introspect INTROSPECT_USER_SKILLS_DIR=~/.introspect/skills scripts/sync-user-skills.sh
+```
+
 ## Install
 
 ```bash
@@ -48,7 +95,7 @@ introspect dashboard --watch  # live terminal dashboard
 introspect runs               # recent reflector runs
 introspect diff               # latest agent-surface diff
 introspect config             # print or update runtime settings
-introspect run                # run Introspect on recent transcript changes
+introspect run                # index recent transcript changes or force a reflector run
 introspect notify             # send a best-effort macOS notification
 introspect uninstall          # remove hooks, scanner, monitor, prompt links
 ```
