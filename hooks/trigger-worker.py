@@ -1196,8 +1196,12 @@ def build_prompt(events: list[dict]) -> str:
             "project proven by the transcript, not the Introspect runtime repo unless the failure is about "
             "Introspect itself. Repo file paths, artifact schemas, command conventions, and workflow rules "
             "belong in project_prompt because future agents load AGENTS.md/CLAUDE.md, not home memory. "
+            "When the failure involved a wrong file path, artifact name, or artifact shape, encode the "
+            "complete replacement rule, including what future agents should do with stale wrong artifacts "
+            "they or a prior run created. "
             "Auto-apply mode is enabled: edit the target repo's AGENTS.md/CLAUDE.md "
-            "directly at the narrowest loading scope, verify with a behavior probe, then commit only the "
+            "directly at the narrowest loading scope, verify with a behavior probe that proves the canonical "
+            "artifact is present and invalid alternate artifacts are absent, then commit only the "
             "prompt or skill slice you changed in that target repo."
         )
         project_skill_instruction = (
@@ -1216,7 +1220,10 @@ def build_prompt(events: list[dict]) -> str:
         project_prompt_instruction = (
             "Use project_prompt for repo-specific behavior, but apply mode is never: do not edit files. "
             "Repo file paths, artifact schemas, command conventions, and workflow rules belong in "
-            "project_prompt because future agents load AGENTS.md/CLAUDE.md, not home memory. Log the "
+            "project_prompt because future agents load AGENTS.md/CLAUDE.md, not home memory. When the "
+            "failure involved a wrong file path, artifact name, or artifact shape, the proposed project "
+            "prompt must include the complete replacement rule, including what future agents should do "
+            "with stale wrong artifacts they or a prior run created. Log the "
             "exact target repo, target surface, and proposed change in the reflector output only."
         )
         project_skill_instruction = (
@@ -1230,6 +1237,9 @@ def build_prompt(events: list[dict]) -> str:
             "project proven by the transcript, not the Introspect runtime repo unless the failure is about "
             "Introspect itself. Repo file paths, artifact schemas, command conventions, and workflow rules "
             "belong in project_prompt because future agents load AGENTS.md/CLAUDE.md, not home memory. "
+            "When the failure involved a wrong file path, artifact name, or artifact shape, the project "
+            "prompt proposal must include the complete replacement rule, including what future agents "
+            "should do with stale wrong artifacts they or a prior run created. "
             "Proposal mode is enabled: do not edit target project source or product "
             "code; write a proposal under {home}/proposals/ when the project prompt needs a foreground "
             "apply. Project AGENTS.md/CLAUDE.md edits outside {home} are for foreground auto-apply runs."

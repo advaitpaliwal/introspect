@@ -96,6 +96,8 @@ def main() -> None:
             f"Edit the live global prompt at {prompt_path}",
             f"do not edit Introspect runtime files under {runtime_path}",
             "The target repo is the event cwd or the project proven by the transcript",
+            "complete replacement rule",
+            "stale wrong artifacts",
             "Proposal mode is enabled",
             "write a proposal",
             "Export each skill to one native global namespace only",
@@ -138,6 +140,7 @@ def main() -> None:
             "Apply mode: auto",
             "Auto-apply mode is enabled",
             "edit the target repo's AGENTS.md/CLAUDE.md directly",
+            "invalid alternate artifacts are absent",
         ]:
             if needle not in auto_prompt:
                 fail(f"missing auto prompt contract: {needle}")

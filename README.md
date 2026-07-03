@@ -239,6 +239,7 @@ Requirements:
 /usr/bin/python3 scripts/test-reflector-prompt-contract.py
 /usr/bin/python3 scripts/test-introspect-run.py
 /usr/bin/python3 scripts/test-telemetry.py
+/usr/bin/python3 scripts/test-benchmark-runner.py
 INTROSPECT_SKILLS_DIR="$PWD/skills" /usr/bin/python3 scripts/validate-skills.py
 ./scripts/test-release-e2e.sh
 ./bin/introspect status

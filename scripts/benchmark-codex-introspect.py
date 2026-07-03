@@ -655,7 +655,7 @@ def main() -> None:
     invalid = [arm for arm in arms if arm not in allowed]
     if invalid:
         fail(f"invalid arm(s): {', '.join(invalid)}")
-    run_dir = Path(args.output_dir).expanduser() / utc_stamp()
+    run_dir = Path(args.output_dir).expanduser().resolve() / utc_stamp()
     run_dir.mkdir(parents=True, exist_ok=True)
     metadata = {
         "created_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
