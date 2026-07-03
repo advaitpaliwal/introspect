@@ -1,8 +1,8 @@
 # Introspect Launch Readiness Status
 
-Updated: 2026-07-03T21:29:31Z
+Updated: 2026-07-03T21:31:15Z
 
-Understanding: 98/100
+Understanding: 100/100
 
 Objective: prove Introspect is ready for launch from the current repo state, including live local runtime health, deterministic release checks, skill/proposal behavior, telemetry, docs, GitHub state, and an independent Daytona-backed verification path.
 
@@ -33,6 +33,10 @@ Evidence log:
 - 2026-07-03T21:28Z: Daytona sandbox passed cross-platform gates at the pushed commit: `test-benchmark-runner`, `test-reflector-prompt-contract`, `test-introspect-run`, `test-telemetry`, built-in skill validation, `test-surface-scopes`, `test-codex-plugin-adapter`, and `test-trigger-words`.
 - 2026-07-03T21:28Z: Daytona sandbox proved `test-install-paths.sh` is macOS-only because it requires `/usr/libexec/PlistBuddy`; local macOS run already passed this gate.
 - 2026-07-03T21:29Z: Daytona sandbox exposed a release e2e isolation bug: `test-release-e2e.sh` read the real home for `dashboard`, `runs`, and `diff`. Patched those commands to use the test temp home and reran local `test-release-e2e.sh` successfully.
+- 2026-07-03T21:30Z: Pushed release e2e temp-home fix as `0bde008` to `origin/codex/introspect-benchmark-hillclimb`; Daytona sandbox fast-forwarded to `0bde0081e13e5b54ddd5f603240241f76596c080`.
+- 2026-07-03T21:30Z: Daytona sandbox passed `test-release-e2e.sh` at `0bde008`.
+- 2026-07-03T21:30Z: Deleted disposable Daytona sandbox `introspect-launch-20260703212629`.
+- 2026-07-03T21:31Z: Final live `bin/introspect status` reported runtime commit `0bde008`, prompt commit `0541ce4`, prompt links healthy for Claude/Codex/OpenCode, scanner and health monitor loaded, telemetry queued `0` with last status `http_200`, latest reflector invocation completed with exit `0`, queued events `0`, lock `False`, and latest Codex user message processed by scanner with `triggered=False`.
 
 Required gates:
 
@@ -47,6 +51,4 @@ Required gates:
 
 Open:
 
-- Push the release e2e temp-home fix and rerun the Daytona release e2e at the new pushed commit.
-- Live `~/.introspect` reflector was running during the latest status check; recheck must show `lock present: False` before final launch status.
-- Delete the disposable Daytona sandbox after final remote proof.
+- None.
