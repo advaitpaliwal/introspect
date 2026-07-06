@@ -36,9 +36,11 @@ OLD_PUBLIC_PROMPT="$HOME_DIR/.agents/AGENTS.md"
 test -d "$INTROSPECT_HOME"
 test -d "$INTROSPECT_HOME/.git"
 test -f "$INTROSPECT_HOME/AGENTS.md"
-grep -q '"telemetry_enabled": true' "$INTROSPECT_HOME/settings.json"
-grep -q '"telemetry_mode": "basic"' "$INTROSPECT_HOME/settings.json"
-grep -q 'telemetry/' "$INTROSPECT_HOME/.gitignore"
+if grep -Eiq 'telemetry|posthog' "$INTROSPECT_HOME/settings.json" "$INTROSPECT_HOME/.gitignore"; then
+  echo "test-install-paths: fresh install should not seed telemetry settings or ignore rules" >&2
+  exit 1
+fi
+expect_absent "$INTROSPECT_HOME/telemetry"
 cmp "$REPO/templates/default-AGENTS.md" "$INTROSPECT_HOME/AGENTS.md" >/dev/null
 if grep -q "Optimize for the user's actual goal" "$INTROSPECT_HOME/AGENTS.md"; then
   echo "test-install-paths: fresh install copied project AGENTS.md instead of the public template" >&2
@@ -68,18 +70,39 @@ test ! -f "$HOME_DIR/.introspect/models/assistant-boundary-logreg-v1.json"
 grep -q "$HOME_DIR/.codex/sessions" "$HOME_DIR/Library/LaunchAgents/ai.companion.introspect.codex-scanner.plist"
 grep -q "$HOME_DIR/.claude/projects" "$HOME_DIR/Library/LaunchAgents/ai.companion.introspect.codex-scanner.plist"
 
-HOME="$HOME_DIR" INTROSPECT_SKIP_LAUNCHD=1 "$REPO/bin/introspect" config --runner codex --sensitivity sensitive --apply-mode auto --telemetry off >/dev/null
+/usr/bin/python3 - "$INTROSPECT_HOME/settings.json" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+data = json.loads(path.read_text())
+data["telemetry_enabled"] = True
+data["telemetry_project_token"] = "phc_secret_test_value"
+data["posthog_project_token"] = "phc_other_secret_test_value"
+path.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
+PY
+mkdir -p "$INTROSPECT_HOME/telemetry"
+printf '{"queued":1}\n' > "$INTROSPECT_HOME/telemetry/state.json"
+printf 'telemetry/\n' >> "$INTROSPECT_HOME/.gitignore"
+
+HOME="$HOME_DIR" INTROSPECT_SKIP_LAUNCHD=1 "$REPO/bin/introspect" config --runner codex --sensitivity sensitive --apply-mode auto >/dev/null
 grep -q "INTROSPECT_REFLECTOR_APPLY_MODE=auto" "$HOME_DIR/.claude/settings.json"
 /usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:INTROSPECT_REFLECTOR_APPLY_MODE" "$HOME_DIR/Library/LaunchAgents/ai.companion.introspect.codex-scanner.plist" | grep -qx "auto"
 /usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:INTROSPECT_REFLECTOR_RUNNER" "$HOME_DIR/Library/LaunchAgents/ai.companion.introspect.codex-scanner.plist" | grep -qx "codex"
 /usr/libexec/PlistBuddy -c "Print :EnvironmentVariables:INTROSPECT_WAKE_SENSITIVITY" "$HOME_DIR/Library/LaunchAgents/ai.companion.introspect.codex-scanner.plist" | grep -qx "sensitive"
-grep -q '"telemetry_enabled": false' "$INTROSPECT_HOME/settings.json"
-
-HOME="$HOME_DIR" INTROSPECT_SKIP_LAUNCHD=1 "$REPO/bin/introspect" config --telemetry on --telemetry-token phc_secret_test_value >/dev/null
+if grep -Eiq 'telemetry|posthog|phc_' "$INTROSPECT_HOME/settings.json"; then
+  echo "test-install-paths: config update should remove stale telemetry settings" >&2
+  exit 1
+fi
+if grep -Eiq 'telemetry|posthog' "$INTROSPECT_HOME/.gitignore"; then
+  echo "test-install-paths: config update should remove stale telemetry ignore rules" >&2
+  exit 1
+fi
+expect_absent "$INTROSPECT_HOME/telemetry"
 HOME="$HOME_DIR" "$REPO/bin/introspect" config > "$TMPDIR/config-output.json"
-grep -q '"telemetry_project_token": "\[configured\]"' "$TMPDIR/config-output.json"
-if grep -q "phc_secret_test_value" "$TMPDIR/config-output.json"; then
-  echo "test-install-paths: config output leaked telemetry project token" >&2
+if grep -Eiq 'telemetry|posthog|phc_' "$TMPDIR/config-output.json"; then
+  echo "test-install-paths: config output should not include stale telemetry fields" >&2
   exit 1
 fi
 

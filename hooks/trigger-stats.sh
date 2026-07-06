@@ -112,4 +112,4 @@ if best:
     if best[0] != "unknown":
         print(f"To revert AGENTS.md to it: git -C {PROMPT_REPO} checkout {best[0]} -- AGENTS.md")
 elif "unknown" in stats:
-    print("\nNo versioned prompt bucket has at least 5 prompts yet; unknown is legacy unversioned telemetry.")
+    print("\nNo versioned prompt bucket has at least 5 prompts yet; unknown is legacy unversioned events.")

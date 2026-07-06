@@ -249,7 +249,6 @@ def install_introspect_home(case_home: Path, introspect_home: Path, args: argpar
             "INTROSPECT_HOME": str(introspect_home),
             "INTROSPECT_SKIP_LAUNCHD": "1",
             "INTROSPECT_SKIP_BACKFILL": "1",
-            "INTROSPECT_TELEMETRY": "off",
             "INTROSPECT_NOTIFY": "0",
             "PYTHONDONTWRITEBYTECODE": "1",
         }
@@ -266,8 +265,6 @@ def install_introspect_home(case_home: Path, introspect_home: Path, args: argpar
         args.apply_mode,
         "--runner",
         "codex",
-        "--telemetry",
-        "off",
         "--no-backfill",
         "--wake-sensitivity",
         args.wake_sensitivity,

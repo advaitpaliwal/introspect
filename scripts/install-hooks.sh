@@ -33,10 +33,6 @@ BACKFILL_MAX_EVENTS="${INTROSPECT_BACKFILL_MAX_EVENTS:-500}"
 BACKFILL_ENABLED="${INTROSPECT_BACKFILL_ENABLED:-1}"
 BACKFILL_FORCE="${INTROSPECT_FORCE_BACKFILL:-0}"
 BACKFILL_SCHEMA_VERSION=4
-TELEMETRY_ENABLED="${INTROSPECT_TELEMETRY:-1}"
-TELEMETRY_MODE="${INTROSPECT_TELEMETRY_MODE:-basic}"
-TELEMETRY_HOST="${INTROSPECT_POSTHOG_HOST:-https://us.i.posthog.com}"
-TELEMETRY_PROJECT_TOKEN="${INTROSPECT_POSTHOG_TOKEN:-${INTROSPECT_POSTHOG_PROJECT_TOKEN:-}}"
 LAUNCHD_PATH="$HOME/.npm-global/bin:$HOME/.local/bin:$HOME/.bun/bin:/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
 LAUNCH_LABEL="ai.companion.introspect.reflector"
 LAUNCH_PLIST="$HOME/Library/LaunchAgents/$LAUNCH_LABEL.plist"
@@ -49,7 +45,7 @@ DEFAULT_PROMPT_TEMPLATE="$REPO/templates/default-AGENTS.md"
 
 usage() {
   cat <<EOF
-Usage: $0 [--uninstall] [--prompt PATH] [--skills PATH] [--user-skills PATH] [--feedback-dir PATH] [--home PATH] [--agents-home PATH] [--reflect-mode immediate|nightly|off] [--apply-mode proposal|auto|never] [--nightly-hour H] [--nightly-minute M] [--runner default|claude|codex] [--claude-model MODEL] [--codex-model MODEL] [--wake-sensitivity quiet|balanced|sensitive|custom] [--wake-threshold DECIMAL] [--backfill-days DAYS] [--backfill-max-events N] [--no-backfill] [--force-backfill] [--telemetry on|off] [--telemetry-mode basic|redacted] [--telemetry-token TOKEN] [--telemetry-host URL]
+Usage: $0 [--uninstall] [--prompt PATH] [--skills PATH] [--user-skills PATH] [--feedback-dir PATH] [--home PATH] [--agents-home PATH] [--reflect-mode immediate|nightly|off] [--apply-mode proposal|auto|never] [--nightly-hour H] [--nightly-minute M] [--runner default|claude|codex] [--claude-model MODEL] [--codex-model MODEL] [--wake-sensitivity quiet|balanced|sensitive|custom] [--wake-threshold DECIMAL] [--backfill-days DAYS] [--backfill-max-events N] [--no-backfill] [--force-backfill]
 
 install          Link native Claude/Codex/OpenCode prompt files and configure hooks.
 --uninstall      Remove Introspect prompt links, hooks, scanner, monitor, and reflector LaunchAgents.
@@ -68,11 +64,6 @@ install          Link native Claude/Codex/OpenCode prompt files and configure ho
                  Max historical prompt events to score on install. Default: 500.
 --no-backfill    Skip the one-time local history backfill on install.
 --force-backfill Run the bounded history backfill again even when a previous backfill completed.
---telemetry      Enable or disable PostHog telemetry. Default: on when a project token is configured.
---telemetry-mode basic sends metadata and content hashes; redacted also sends redacted snippets.
---telemetry-token
-                 PostHog project token for the Introspect project.
---telemetry-host PostHog capture host. Default: https://us.i.posthog.com.
 EOF
 }
 
@@ -177,22 +168,6 @@ while [[ $# -gt 0 ]]; do
       BACKFILL_FORCE="1"
       shift
       ;;
-    --telemetry)
-      TELEMETRY_ENABLED="${2:-}"
-      shift 2
-      ;;
-    --telemetry-mode)
-      TELEMETRY_MODE="${2:-}"
-      shift 2
-      ;;
-    --telemetry-token|--posthog-token|--posthog-project-token)
-      TELEMETRY_PROJECT_TOKEN="${2:-}"
-      shift 2
-      ;;
-    --telemetry-host|--posthog-host)
-      TELEMETRY_HOST="${2:-}"
-      shift 2
-      ;;
     -h|--help)
       usage
       exit 0
@@ -258,29 +233,6 @@ case "$WAKE_SENSITIVITY" in
     exit 2
     ;;
 esac
-case "$(printf '%s' "$TELEMETRY_ENABLED" | tr '[:upper:]' '[:lower:]')" in
-  1|true|yes|y|on|enabled|basic|redacted)
-    TELEMETRY_ENABLED="true"
-    ;;
-  0|false|no|n|off|disabled|none|never)
-    TELEMETRY_ENABLED="false"
-    ;;
-  *)
-    echo "invalid --telemetry: $TELEMETRY_ENABLED" >&2
-    exit 2
-    ;;
-esac
-case "$TELEMETRY_MODE" in
-  basic|redacted) ;;
-  off|disabled|false|0|none|never)
-    TELEMETRY_MODE="basic"
-    TELEMETRY_ENABLED="false"
-    ;;
-  *)
-    echo "invalid --telemetry-mode: $TELEMETRY_MODE" >&2
-    exit 2
-    ;;
-esac
 case "$REFLECTOR_APPLY_MODE" in
   proposal|auto|never) ;;
   *)
@@ -335,7 +287,7 @@ remove_old_agents_prompt_bridge() {
 }
 
 ensure_home_files() {
-  mkdir -p "$AGENTS_HOME_DIR" "$INTROSPECT_HOME_DIR/skills" "$INTROSPECT_HOME_DIR/memory" "$INTROSPECT_HOME_DIR/models" "$INTROSPECT_HOME_DIR/feedback" "$INTROSPECT_HOME_DIR/runs" "$INTROSPECT_HOME_DIR/proposals" "$INTROSPECT_HOME_DIR/telemetry"
+  mkdir -p "$AGENTS_HOME_DIR" "$INTROSPECT_HOME_DIR/skills" "$INTROSPECT_HOME_DIR/memory" "$INTROSPECT_HOME_DIR/models" "$INTROSPECT_HOME_DIR/feedback" "$INTROSPECT_HOME_DIR/runs" "$INTROSPECT_HOME_DIR/proposals"
   if [[ ! -f "$INTROSPECT_HOME_DIR/AGENTS.md" ]]; then
     if [[ -f "$DEFAULT_PROMPT_TEMPLATE" ]]; then
       cp "$DEFAULT_PROMPT_TEMPLATE" "$INTROSPECT_HOME_DIR/AGENTS.md"
@@ -359,10 +311,6 @@ ensure_home_files() {
   "reflector_claude_model": "",
   "reflector_claude_fallback_model": "",
   "reflector_codex_model": "",
-  "telemetry_enabled": $TELEMETRY_ENABLED,
-  "telemetry_host": "$TELEMETRY_HOST",
-  "telemetry_mode": "$TELEMETRY_MODE",
-  "telemetry_project_token": "$TELEMETRY_PROJECT_TOKEN",
   "wake_sensitivity": "$WAKE_SENSITIVITY",
   "wake_custom_threshold": ${WAKE_THRESHOLD:-0.64},
   "nightly_hour": $NIGHTLY_HOUR,
@@ -377,7 +325,7 @@ JSON
 This repository is private local state for Introspect:
 
 - `AGENTS.md`: the Git-tracked source for the user-wide prompt linked into each agent's native prompt file.
-- `trigger-words.txt`: optional review terms, one lowercase word per line. Introspect does not install defaults.
+- `trigger-words.txt`: optional review terms, one lowercase word per line.
 - `settings.json`: local CLI/runtime preferences such as notification delivery.
 - `skills/`: private user skills.
 - `memory/`: durable user and machine facts.
@@ -385,9 +333,8 @@ This repository is private local state for Introspect:
 - `runs/`: ignored local run artifacts.
 - `proposals/`: reflector proposals before they are accepted.
 - `models/`: ignored local model artifacts seeded or produced by Introspect.
-- `telemetry/`: ignored local PostHog delivery queue and anonymous machine id.
 
-Durable prompt, settings, skill, and memory changes are Git-tracked. Runtime artifacts stay local and ignored. Telemetry, when enabled and configured with a PostHog project token, sends metadata and hashes by default; raw transcript archives are not uploaded.
+Durable prompt, settings, skill, and memory changes are Git-tracked. Runtime artifacts stay local and ignored.
 MD
   fi
   "$SETUP_PYTHON" - "$INTROSPECT_HOME_DIR/README.md" <<'PY'
@@ -408,7 +355,15 @@ if updated != text:
     path.write_text(updated)
 PY
   touch "$INTROSPECT_HOME_DIR/.gitignore"
-  for entry in "feedback/" "runs/" "proposals/" "telemetry/" "models/*.json" "models/*.json.*"; do
+  if [[ -d "$INTROSPECT_HOME_DIR/telemetry" ]]; then
+    rm -rf "$INTROSPECT_HOME_DIR/telemetry"
+  fi
+  if grep -Fxq "telemetry/" "$INTROSPECT_HOME_DIR/.gitignore"; then
+    tmp_ignore="$INTROSPECT_HOME_DIR/.gitignore.$$.tmp"
+    grep -Fxv "telemetry/" "$INTROSPECT_HOME_DIR/.gitignore" > "$tmp_ignore" || true
+    mv "$tmp_ignore" "$INTROSPECT_HOME_DIR/.gitignore"
+  fi
+  for entry in "feedback/" "runs/" "proposals/" "models/*.json" "models/*.json.*"; do
     if ! grep -Fxq "$entry" "$INTROSPECT_HOME_DIR/.gitignore"; then
       printf '%s\n' "$entry" >> "$INTROSPECT_HOME_DIR/.gitignore"
     fi
@@ -425,7 +380,7 @@ PY
 }
 
 update_home_settings() {
-  "$SETUP_PYTHON" - "$INTROSPECT_HOME_DIR/settings.json" "$REFLECT_MODE" "$REFLECTOR_APPLY_MODE" "$REFLECTOR_RUNNER" "$REFLECTOR_CLAUDE_MODEL" "$REFLECTOR_CLAUDE_FALLBACK_MODEL" "$REFLECTOR_CODEX_MODEL" "$WAKE_SENSITIVITY" "${WAKE_THRESHOLD:-0.64}" "$NIGHTLY_HOUR" "$NIGHTLY_MINUTE" "$TELEMETRY_ENABLED" "$TELEMETRY_MODE" "$TELEMETRY_HOST" "$TELEMETRY_PROJECT_TOKEN" <<'PY'
+  "$SETUP_PYTHON" - "$INTROSPECT_HOME_DIR/settings.json" "$REFLECT_MODE" "$REFLECTOR_APPLY_MODE" "$REFLECTOR_RUNNER" "$REFLECTOR_CLAUDE_MODEL" "$REFLECTOR_CLAUDE_FALLBACK_MODEL" "$REFLECTOR_CODEX_MODEL" "$WAKE_SENSITIVITY" "${WAKE_THRESHOLD:-0.64}" "$NIGHTLY_HOUR" "$NIGHTLY_MINUTE" <<'PY'
 import json
 import os
 import sys
@@ -443,12 +398,7 @@ keys = {
     "wake_custom_threshold": float(sys.argv[9]),
     "nightly_hour": int(sys.argv[10]),
     "nightly_minute": int(sys.argv[11]),
-    "telemetry_enabled": sys.argv[12] == "true",
-    "telemetry_mode": sys.argv[13],
-    "telemetry_host": sys.argv[14],
 }
-if sys.argv[15]:
-    keys["telemetry_project_token"] = sys.argv[15]
 try:
     data = json.loads(path.read_text())
 except Exception:
@@ -456,7 +406,14 @@ except Exception:
 if not isinstance(data, dict):
     data = {}
 data.setdefault("notifications_enabled", True)
-data.setdefault("telemetry_project_token", "")
+for stale_key in (
+    "telemetry_enabled",
+    "telemetry_mode",
+    "telemetry_host",
+    "telemetry_project_token",
+    "posthog_project_token",
+):
+    data.pop(stale_key, None)
 data.update(keys)
 tmp = path.with_suffix(path.suffix + f".{os.getpid()}.tmp")
 tmp.write_text(json.dumps(data, indent=2, sort_keys=True) + "\n")
@@ -577,7 +534,7 @@ if [[ "$MODE" == "install" ]]; then
   fi
 fi
 
-chmod +x "$REPO/bin/introspect" "$HOOK" "$WORKER" "$SCANNER" "$REPO/hooks/telemetry.py" "$MONITOR" "$SKILL_SYNC" "$REPO/hooks/trigger-stats.sh" "$REPO/scripts/introspect-status.sh" "$REPO/scripts/test-trigger-words.py" "$REPO/scripts/test-telemetry.py" "$REPO/scripts/test-surface-scopes.py" "$REPO/scripts/test-reflector-prompt-contract.py" "$REPO/scripts/test-user-skill-sync.sh" "$REPO/scripts/test-install-paths.sh"
+chmod +x "$REPO/bin/introspect" "$HOOK" "$WORKER" "$SCANNER" "$MONITOR" "$SKILL_SYNC" "$REPO/hooks/trigger-stats.sh" "$REPO/scripts/introspect-status.sh" "$REPO/scripts/test-trigger-words.py" "$REPO/scripts/test-surface-scopes.py" "$REPO/scripts/test-reflector-prompt-contract.py" "$REPO/scripts/test-user-skill-sync.sh" "$REPO/scripts/test-install-paths.sh"
 
 if [[ "$MODE" == "install" ]]; then
   remove_old_agents_prompt_bridge
