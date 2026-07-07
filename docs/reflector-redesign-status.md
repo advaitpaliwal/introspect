@@ -23,10 +23,11 @@ Rebuild the Introspect reflector from "append another prose rule to AGENTS.md" i
 - Verify with the existing gate suite (10 deterministic tests) + a behavior probe each slice.
 
 ## Plan (shippable slices)
-- [ ] S0: Deep-read classifier, benchmark harness, trigger-stats, scanner schema, surface-diff. Raise understanding to 85+. Write design.
-- [ ] S1: ACE playbook representation + incremental curator; consolidate live AGENTS.md into playbook form. (Biggest lever.)
-- [ ] S2: Failure clustering in reflector batching.
-- [ ] S3: Held-out eval gate outside the loop.
+- [x] S0: Deep-read classifier, benchmark harness, trigger-stats, scanner schema, surface-diff. Understanding 85. Design written.
+- [x] S1: ACE playbook representation (hooks/playbook.py) + incremental curator instructions in the reflector prompt. Shipped (6d8a742).
+- [x] S2: Failure clustering — folded into the reflector prompt (step 1b: cluster batch to one root cause, consult no_change recurrence). Shipped with S1.
+- [x] S3: Held-out eval gate outside the loop (scripts/validate-prompt-edit.py + bench/codex-introspect-heldout.jsonl). Trigger rate is no longer the acceptance signal; held-out task success is, measured by the existing A/B benchmark and disjoint from curated suites.
+- [ ] S4 (needs user sign-off): one-time consolidation of the LIVE 15.5k-word AGENTS.md down toward the 6000-word budget — split run-ons, merge dupes, drop never-re-fired rules, preserving every distinct behavioral rule. High-stakes (it governs all the user's sessions), so present as a reviewable candidate rather than silently overwrite.
 
 ## S0 findings (understanding now 75/100)
 

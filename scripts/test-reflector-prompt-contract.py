@@ -108,6 +108,9 @@ def main() -> None:
             "prefer editing, sharpening, merging, or pruning an existing rule",
             "net-shrink or hold the total word count",
             "hooks/playbook.py",
+            "Trigger rate is NOT the acceptance signal",
+            "scripts/validate-prompt-edit.py",
+            "held-out task success",
         ]
         for needle in required:
             if needle not in prompt:
