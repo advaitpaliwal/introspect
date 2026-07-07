@@ -675,6 +675,37 @@ def commit_introspect_home_surfaces(message: str = "Update Introspect home") -> 
     return True
 
 
+def runner_is_authenticated(runner: str, path: str) -> bool:
+    """Return False for a runner that is installed but cannot actually run.
+
+    A logged-out claude CLI exits immediately with 'Not logged in', which
+    otherwise gets selected as primary and wastes an attempt before the codex
+    fallback fires. Treat it as unavailable so codex is chosen directly. An
+    ANTHROPIC_API_KEY in the environment authenticates claude without OAuth, so
+    honor that too.
+    """
+    if runner != "claude":
+        return True
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return True
+    try:
+        result = subprocess.run(
+            [path, "auth", "status"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        log(f"claude auth status check failed: {exc!r}; treating claude runner as available")
+        return True
+    blob = f"{result.stdout}\n{result.stderr}".lower()
+    if '"loggedin": true' in blob.replace(" ", "") or '"loggedin":true' in blob.replace(" ", ""):
+        return True
+    if "logged in" in blob and "not logged in" not in blob:
+        return True
+    return False
+
+
 def available_reflector_runners() -> dict[str, str]:
     runners = {}
     for name in ("claude", "codex"):
@@ -691,7 +722,7 @@ def available_reflector_runners() -> dict[str, str]:
                 if candidate.is_file() and os.access(candidate, os.X_OK):
                     path = str(candidate)
                     break
-        if path:
+        if path and runner_is_authenticated(name, path):
             runners[name] = path
     return runners
 
