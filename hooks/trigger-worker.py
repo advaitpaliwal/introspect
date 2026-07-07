@@ -56,6 +56,13 @@ except Exception:
         return str(event.get("event_id") or event.get("dedupe_key") or event.get("prompt_hash") or "")
 
 
+try:  # addressable-playbook view for incremental curation; optional/degradable
+    from playbook import lint_playbook as _lint_playbook, parse_playbook as _parse_playbook
+except Exception:  # pragma: no cover - reflector still runs without the lint block
+    _lint_playbook = None
+    _parse_playbook = None
+
+
 DEFAULT_REPO = Path(__file__).resolve().parent.parent
 REPO = Path(os.path.expanduser(os.environ.get("INTROSPECT_REPO", str(DEFAULT_REPO))))
 SKILLS_DIR = Path(os.path.expanduser(os.environ.get("INTROSPECT_SKILLS_DIR", str(REPO / "skills"))))
@@ -1217,6 +1224,46 @@ def schedule_retry(delay: float, state: dict) -> None:
     log(f"scheduled retry in {delay}s")
 
 
+def playbook_status_block() -> str:
+    """A short live lint of the global prompt, so the reflector curates against
+    a real word budget instead of appending blind. Best-effort: returns "" when
+    the playbook module or the prompt file is unavailable."""
+    if _parse_playbook is None or _lint_playbook is None:
+        return ""
+    if not PROMPT_PATH.exists() or PROMPT_PATH.is_dir():
+        return ""
+    try:
+        pb = _parse_playbook(PROMPT_PATH.read_text(encoding="utf-8"))
+        report = _lint_playbook(pb)
+    except Exception:
+        return ""
+    lines = [
+        "Live global prompt playbook state (curate within this, do not grow it):",
+        f"- {report.rule_count} rules, {report.total_words} words, budget {report.total_budget}.",
+    ]
+    if report.over_budget:
+        lines.append(
+            f"- OVER BUDGET by {report.total_words - report.total_budget} words. "
+            "Any core_prompt edit must net-shrink or hold the word count: merge, "
+            "sharpen, or prune an existing rule rather than adding one."
+        )
+    if report.over_long:
+        worst = ", ".join(f"{rid} ({wc}w)" for rid, wc in report.over_long[:5])
+        lines.append(
+            f"- {len(report.over_long)} multi-topic run-on rule(s) are split/sharpen candidates; worst: {worst}."
+        )
+    if report.duplicates:
+        pairs = ", ".join(f"{a}~{b}" for a, b, _ in report.duplicates[:5])
+        lines.append(
+            f"- {len(report.duplicates)} near-duplicate rule pair(s) are merge candidates: {pairs}."
+        )
+    lines.append(
+        "- Inspect rule ids with: /usr/bin/python3 "
+        f"{REPO}/hooks/playbook.py ids {PROMPT_PATH}"
+    )
+    return "\n".join(lines)
+
+
 def build_prompt(events: list[dict]) -> str:
     event_lines = []
     for i, event in enumerate(events, 1):
@@ -1305,6 +1352,8 @@ def build_prompt(events: list[dict]) -> str:
             "runtime feedback, lock, run, or model artifacts."
         )
 
+    playbook_block = playbook_status_block()
+
     return f"""You are the Introspect trigger reflector.
 
 A batch of classifier wake events fired. Optional review terms are metadata only. Judge whether each event reflects a real agent-behavior failure or just casual register / external venting. Do not change anything for false positives.
@@ -1323,6 +1372,8 @@ Transcript paths to inspect:
     Live global prompt:
     - {PROMPT_PATH}
 
+{playbook_block}
+
     Introspect home Git repo:
     - {INTROSPECT_HOME}
 
@@ -1338,21 +1389,23 @@ Codex thread evidence:
 
 Workflow:
 1. Read the exact message identified by message_locator / transcript_path + transcript_line when present, then the surrounding recent turns for that transcript/session. Identify the agent behavior that caused the trigger, not the wording of the user's message. The snippet is only a preview. A codex://threads/<id> link is local evidence, not an inaccessible external URL; use available local tooling to resolve it, and log the missing resolver when no resolver exists.
+1b. Cluster the batch by root cause before proposing anything. Multiple events in one batch, and events resembling ones prior runs already saw, are usually the same underlying behavior. Name the single root-cause failure pattern, not each surface instance, and make at most one curation move per root cause. Read the recent tail of {LOG} and {INTROSPECT_HOME}/feedback/reflector-batches.jsonl: if this same pattern has been dismissed as no_change or "already covered" across prior runs, the existing rule is not working -- do not dismiss it again and do not add a near-duplicate. Either sharpen the existing rule so it actually binds, or route the behavior to a skill/hook/deterministic check, or conclude the wake was a false positive and say so.
 2. Run /usr/bin/python3 {REPO}/hooks/trigger-stats.sh and compare the current prompt version against prior versions.
-3. Classify the change target as exactly one of: no_change, core_prompt, project_prompt, home_memory, skill_new, skill_update, project_skill_new, project_skill_update, skill_prune.
-    4. Use core_prompt only for an always-loaded invariant that should apply across nearly every task. Edit the live global prompt at {PROMPT_PATH}; do not edit Introspect runtime files under {REPO} unless the source thread is about Introspect itself. Before editing the global prompt, read {SKILLS_DIR}/agent-md-creator/SKILL.md for placement and {SKILLS_DIR}/writing-agent-prompt/SKILL.md for wording, then verify with a realistic response probe drawn from the failure transcript.
+3. Classify the change target as exactly one of: no_change, core_prompt, project_prompt, home_memory, skill_new, skill_update, project_skill_new, project_skill_update, skill_prune. Default to no_change: a core_prompt edit is justified only when a genuinely new, always-loaded invariant is missing AND no existing rule covers it. Adding prose is the exception, not the reflex.
+    4. Use core_prompt only for an always-loaded invariant that should apply across nearly every task. The global prompt is an addressable playbook of atomic rules (section-slug.NN), not a growing essay -- see the playbook state above and list rules with `/usr/bin/python3 {REPO}/hooks/playbook.py ids {PROMPT_PATH}`. Curate incrementally: strongly prefer editing, sharpening, merging, or pruning an existing rule (cite its id in your log) over adding a new one. Keep every rule atomic -- one behavior per rule; when a fix belongs to a run-on rule, split that rule rather than appending another clause. The playbook has a word budget: when it is at or over budget, a core_prompt edit MUST net-shrink or hold the total word count (merge or prune to make room), never grow it. After any core_prompt edit run `/usr/bin/python3 {REPO}/hooks/playbook.py lint {PROMPT_PATH}` and confirm you did not add a duplicate or push further over budget. Edit the live global prompt at {PROMPT_PATH}; do not edit Introspect runtime files under {REPO} unless the source thread is about Introspect itself. Before editing the global prompt, read {SKILLS_DIR}/agent-md-creator/SKILL.md for placement and {SKILLS_DIR}/writing-agent-prompt/SKILL.md for wording, then verify with a realistic response probe drawn from the failure transcript.
     5. {project_prompt_instruction}
     6. Use home_memory for durable facts, preferences, user vocabulary, or machine/project state that should be remembered but should not change loaded agent behavior. Do not use home_memory for repo file paths, artifact schemas, command conventions, or workflow rules that future agents must follow in a repo; route those to project_prompt or project_skill instead. Write memory under {INTROSPECT_HOME}/memory only when it is directly supported by the transcript.
 7. Use skill_new or skill_update only for repeatable procedures, tool workflows, domain references, scripts, or assets that future agents should load on demand. Do not create a skill from one noisy event unless it captures a recurring workflow or a corrected procedure that will likely repeat.
 8. Prefer updating an existing umbrella skill or support file over creating a narrow duplicate. {project_skill_instruction}
 9. Use skill_prune for stale, duplicated, overbroad, unsupported, or harmful skills. Before any skill operation, read skills/skill-creator/SKILL.md, its source map, the skills index, and the closest existing skill. Prefer updating or pruning a close skill over creating a duplicate.
 10. For user-wide skill changes, write or edit a self-contained <slug>/SKILL.md under {USER_SKILLS_DIR}, update {USER_SKILLS_DIR}/index.json, run INTROSPECT_SKILLS_DIR={USER_SKILLS_DIR} /usr/bin/python3 {REPO}/scripts/validate-skills.py, then run INTROSPECT_HOME={INTROSPECT_HOME} INTROSPECT_USER_SKILLS_DIR={USER_SKILLS_DIR} {REPO}/scripts/sync-user-skills.sh. Export each skill to one native global namespace only: default/compatibility=codex uses ~/.agents/skills for Codex and OpenCode, compatibility=claude uses ~/.claude/skills for Claude, and compatibility=opencode uses ~/.config/opencode/skills for OpenCode-only skills. Do not export the same skill name to multiple OpenCode-visible roots. Use {SKILLS_DIR} only for built-in Introspect core skills. For project skills, validate the SKILL.md frontmatter and verify the relevant agent can discover it. For skill_prune, prefer marking status deprecated or narrowing activation before deleting files.
-11. If the trigger rate rose after a recent AGENTS.md change, prefer reverting or narrowing that change over adding another rule.
+11. If the trigger rate did not fall after a recent AGENTS.md change, that change is not working: prefer reverting, narrowing, or replacing it over adding another rule on top. A flat or rising rate across several prompt versions means the append-more-prose lever is exhausted -- consolidate or re-route, do not append.
     12. {commit_instruction}
 13. If no change is justified, make no file changes and say why in the log output.
 
 Constraints:
-- One batch, one decision. Do not spawn more agents.
+- One batch, one root-cause decision. Do not spawn more agents.
+- Keep the playbook atomic and within budget: one behavior per rule, prefer edit/merge/prune over add, and never let a core_prompt edit grow the total word count when the playbook is at or over budget.
 - Do not edit for casual profanity, slurs used as examples, or anger about an external system.
 - In durable artifacts (prompt edits, skills, memory, proposals, commit messages), paraphrase the user's point in neutral words; never copy profane, hostile, or slur-containing user wording verbatim. Quote exact user text only when the literal string is the command, label, error, or value the rule is about.
 - Keep changes short and reversible.

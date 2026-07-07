@@ -103,6 +103,11 @@ def main() -> None:
             "Export each skill to one native global namespace only",
             "Commit in Introspect home",
             "never copy profane, hostile, or slur-containing user wording verbatim",
+            "Cluster the batch by root cause before proposing anything",
+            "addressable playbook of atomic rules",
+            "prefer editing, sharpening, merging, or pruning an existing rule",
+            "net-shrink or hold the total word count",
+            "hooks/playbook.py",
         ]
         for needle in required:
             if needle not in prompt:
