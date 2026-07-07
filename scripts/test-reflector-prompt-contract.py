@@ -102,6 +102,7 @@ def main() -> None:
             "write a proposal",
             "Export each skill to one native global namespace only",
             "Commit in Introspect home",
+            "never copy profane, hostile, or slur-containing user wording verbatim",
         ]
         for needle in required:
             if needle not in prompt:

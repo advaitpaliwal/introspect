@@ -54,8 +54,9 @@ quantitative tier ladder; a flat limit that is identical across all plans.
   which is 5×/2×. Compute and hardware may legitimately follow a flatter curve
   than price — but that is a deviating curve, so state it and confirm with the
   user before shipping; do not present the doubled ladder as the obvious plan.
-  Shipping `COMPUTER_RUNTIME_TIERS` at 2/4/8 vCPU drew "really? u double for
-  each thats retarded?" and was re-sized to 1 / 2 / 4 vCPU.
+  Shipping `COMPUTER_RUNTIME_TIERS` at 2/4/8 vCPU drew an immediate user
+  correction that per-tier doubling was the wrong ladder, and was re-sized to
+  1 / 2 / 4 vCPU.
 - Paused / inactive items count toward caps — pausing must not free a slot
   (see the `maxAutomations` comment in `PlanTierSpec`).
 - `emailStorageMb` does not scale uniformly (1000 / 25000 / 100000) — confirm

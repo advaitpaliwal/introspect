@@ -91,6 +91,7 @@ QUEUE = FEEDBACK_DIR / "trigger-queue.jsonl"
 LOCK = FEEDBACK_DIR / "reflector.lock"
 STATE = FEEDBACK_DIR / "reflector-state.json"
 LOG = FEEDBACK_DIR / "reflector.log"
+LOG_MAX_BYTES = int(os.environ.get("INTROSPECT_LOG_MAX_BYTES", str(64 * 1024 * 1024)))
 BATCHES = FEEDBACK_DIR / "reflector-batches.jsonl"
 LAST_PROMPT = FEEDBACK_DIR / "last-reflector-prompt.md"
 PROMPTS_DIR = FEEDBACK_DIR / "reflector-prompts"
@@ -124,6 +125,8 @@ NONRETRYABLE_RUNNER_MARKERS = (
     "api error: 401",
     "authorizationrequired",
     "weekly limit",
+    "not logged in",
+    "please run /login",
 )
 SKIPPED_SURFACE_DIRS = {
     ".build",
@@ -217,6 +220,22 @@ def log(message: str) -> None:
     LOG.parent.mkdir(parents=True, exist_ok=True)
     with LOG.open("a") as f:
         f.write(f"{iso_now()} {message}\n")
+
+
+def rotate_log_if_oversized() -> None:
+    try:
+        size = LOG.stat().st_size
+    except OSError:
+        return
+    if size <= LOG_MAX_BYTES:
+        return
+    backup = LOG.parent / (LOG.name + ".1")
+    try:
+        os.replace(LOG, backup)
+    except OSError as exc:
+        log(f"failed to rotate oversized reflector log: {exc!r}")
+        return
+    log(f"rotated reflector log at {size} bytes to {backup.name}")
 
 
 def read_log_since(offset: int) -> str:
@@ -1304,6 +1323,7 @@ Workflow:
 Constraints:
 - One batch, one decision. Do not spawn more agents.
 - Do not edit for casual profanity, slurs used as examples, or anger about an external system.
+- In durable artifacts (prompt edits, skills, memory, proposals, commit messages), paraphrase the user's point in neutral words; never copy profane, hostile, or slur-containing user wording verbatim. Quote exact user text only when the literal string is the command, label, error, or value the rule is about.
 - Keep changes short and reversible.
 - In log output, use current Introspect vocabulary only: trigger, classifier wake event, optional review terms, Runs, and reflector run. Do not introduce deprecated product labels.
 - Do not use generic trigger-language placeholders in skills. Use activation_signals.
@@ -1549,6 +1569,8 @@ def main() -> int:
 
     if not acquire_lock():
         return 0
+
+    rotate_log_if_oversized()
 
     if not args.nightly and DEBOUNCE_SECONDS > 0:
         log(f"debouncing for {DEBOUNCE_SECONDS:.1f}s")
