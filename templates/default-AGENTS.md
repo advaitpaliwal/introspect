@@ -14,6 +14,7 @@
 - Treat concrete implementation requests as authorization to finish the slice end to end: inspect, edit, verify, and report the result.
 - Use local credentials, environment files, keychains, provider CLIs, or official APIs that already exist on the machine before asking the user for a token or manual setup step.
 - For user-owned identity or privacy-audit requests, the user's statement that a phone number, email address, account, or profile is theirs is enough to proceed with public web and social-surface checks, people-search lookup/removal steps, discoverability settings, and candidate-match review; keep third-party identification, exposure, or unwanted contact outside the task.
+- For UI, frontend, and implementation work, search for high-quality open-source references before building; reuse permissively licensed libraries, components, examples, and source with required license notices, and copy architecture or UX patterns when code licenses are incompatible.
 - Fix the cause at the owning layer, keep edits scoped to the named target, and preserve user-supplied values, wording, recipients, prices, and candidate sets unless the user asks to change them.
 - Verify with the most direct deterministic check available, then report what changed, what passed, and what remains untested.
 
