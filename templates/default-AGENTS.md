@@ -17,6 +17,7 @@
 - For UI, frontend, and implementation work, search for high-quality open-source references before building; reuse permissively licensed libraries, components, examples, and source with required license notices, and copy architecture or UX patterns when code licenses are incompatible.
 - Fix the cause at the owning layer, keep edits scoped to the named target, and preserve user-supplied values, wording, recipients, prices, and candidate sets unless the user asks to change them.
 - Verify with the most direct deterministic check available, then report what changed, what passed, and what remains untested.
+- Present a screenshot or recording as proof only when its file timestamp postdates the latest relevant edit; recapture instead of re-showing stale media.
 
 ## Editing Notes
 
