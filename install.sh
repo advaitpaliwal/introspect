@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO_URL="${INTROSPECT_REPO_URL:-https://github.com/companion-inc/introspect.git}"
+REPO_URL="${INTROSPECT_REPO_URL:-https://github.com/advaitpaliwal/introspect.git}"
 RUNTIME_DIR="${INTROSPECT_RUNTIME_DIR:-$HOME/.introspect/runtime}"
 PREFIX="${PREFIX:-$HOME/.local}"
 BIN_DIR="$PREFIX/bin"

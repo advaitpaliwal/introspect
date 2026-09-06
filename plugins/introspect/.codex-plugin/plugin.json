@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "Codex adapter for Introspect.",
   "author": {
-    "name": "Companion"
+    "name": "Advait Paliwal"
   },
   "license": "MIT",
   "keywords": [
@@ -16,7 +16,7 @@
     "displayName": "Introspect for Codex",
     "shortDescription": "Keep agent instructions aligned with real Codex sessions.",
     "longDescription": "Adds a Codex-native Introspect hook and skill that call the local Introspect core. Durable state stays under ~/.introspect.",
-    "developerName": "Companion",
+    "developerName": "Advait Paliwal",
     "category": "Productivity",
     "capabilities": [
       "Interactive",

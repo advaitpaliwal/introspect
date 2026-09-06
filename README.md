@@ -58,7 +58,7 @@ INTROSPECT_HOME=~/.introspect INTROSPECT_USER_SKILLS_DIR=~/.introspect/skills sc
 ## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/companion-inc/introspect/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/advaitpaliwal/introspect/main/install.sh | bash
 ```
 
 Then run:
@@ -212,7 +212,7 @@ Introspect exports each user-wide skill into one native global namespace to avoi
 ## Build From Source
 
 ```bash
-git clone https://github.com/companion-inc/introspect.git
+git clone https://github.com/advaitpaliwal/introspect.git
 cd introspect
 ./bin/introspect
 ./bin/introspect install
@@ -228,6 +228,8 @@ Requirements:
 ## Verify
 
 ```bash
+bash -n install.sh
+/usr/bin/python3 scripts/test-installer-source.py
 ./scripts/test-install-paths.sh
 /usr/bin/python3 scripts/test-trigger-words.py
 /usr/bin/python3 scripts/test-reflector-prompt-contract.py
