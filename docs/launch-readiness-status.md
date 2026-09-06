@@ -52,3 +52,11 @@ Required gates:
 Open:
 
 - None.
+
+## 2026-09-06 — personal source references (review candidate)
+
+- Scope/understanding: 95/100 for source-reference migration only. The continuing public repository is `advaitpaliwal/introspect` (ID 1276424372), not the private legacy macOS repository.
+- Installer default and README source URLs now use the personal repository. Public plugin maintainer display is Advait Paliwal; license, local runtime paths, bundle/LaunchAgent identities, and existing-checkout fetch behavior are unchanged.
+- Verified locally: `bash -n install.sh` and 3 tests in `scripts/test-installer-source.py`. Tests stub every installation command and cover default source, custom source/runtime/prefix, README destinations, and plugin display.
+- Not a new launch qualification: no installed-user-state test, benchmark, publication, deployment, or credential operation. Existing installations still fetch their configured origin; this change does not rewrite it.
+- Next: review/merge the source PR, then verify the merged personal source fetch separately from any authorized installation.
